@@ -1,0 +1,24 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+  body {
+    @apply bg-jet text-white font-sans antialiased;
+  }
+}
+
+@layer utilities {
+  .text-border {
+    -webkit-text-stroke: 1px rgba(245, 245, 240, 0.2);
+    color: transparent;
+  }
+  
+  .text-border-hover:hover {
+    color: #F5F5F0;
+    -webkit-text-stroke: 0px transparent;
+  }
+}
