@@ -3,14 +3,16 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { Cursor } from './components/Cursor';
 import { Navbar } from './components/Navbar';
 import { HeroSection } from './sections/HeroSection';
-import ScrollMorphHero from './components/ui/scroll-morph-hero';
+import GallerySection from './sections/GallerySection';
 import AbetkaReveal from './components/ui/abetka-reveal';
+
+import { FooterSection } from './sections/FooterSection';
 
 function App() {
   const [revealDone, setRevealDone] = useState(false);
 
   return (
-    <div className="bg-jet min-h-screen text-white selection:bg-crimson selection:text-white">
+    <div className="bg-jet min-h-screen text-white selection:bg-crimson selection:text-white overflow-x-hidden">
       <AnimatePresence mode="popLayout">
         {!revealDone ? (
           <motion.div
@@ -28,12 +30,14 @@ function App() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.6 }}
+            className="flex flex-col min-h-screen"
           >
             <Navbar />
             <Cursor />
-            <main>
+            <main className="relative z-10 flex flex-col">
               <HeroSection />
-              <ScrollMorphHero />
+              <GallerySection />
+              <FooterSection />
             </main>
           </motion.div>
         )}
@@ -43,4 +47,3 @@ function App() {
 }
 
 export default App;
-

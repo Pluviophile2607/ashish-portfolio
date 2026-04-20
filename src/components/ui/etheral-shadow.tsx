@@ -55,8 +55,10 @@ const useInstanceId = (): string => {
 };
 
 export function EtherealShadow({
+    sizing = 'fill',
     color = 'rgba(128, 128, 128, 1)',
     animation,
+    noise,
     style,
     className
 }: ShadowOverlayProps) {
@@ -83,9 +85,8 @@ export function EtherealShadow({
                 ease: "linear",
                 delay: 0,
                 onUpdate: (value: number) => {
-                    const el = feColorMatrixRef.current;
-                    if (el && typeof el.setAttribute === 'function') {
-                        el.setAttribute("values", String(value));
+                    if (feColorMatrixRef.current) {
+                        feColorMatrixRef.current.setAttribute("values", String(value));
                     }
                 }
             });
@@ -158,9 +159,9 @@ export function EtherealShadow({
                 <div
                     style={{
                         backgroundColor: color,
-                        maskImage: `radial-gradient(circle at center, black 0%, transparent 100%)`,
-                        WebkitMaskImage: `radial-gradient(circle at center, black 0%, transparent 100%)`,
-                        maskSize: "100% 100%",
+                        maskImage: `url('https://framerusercontent.com/images/ceBGguIpUU8luwByxuQz79t7To.png')`,
+                        WebkitMaskImage: `url('https://framerusercontent.com/images/ceBGguIpUU8luwByxuQz79t7To.png')`,
+                        maskSize: sizing === "stretch" ? "100% 100%" : "cover",
                         maskRepeat: "no-repeat",
                         maskPosition: "center",
                         width: "100%",
@@ -171,7 +172,18 @@ export function EtherealShadow({
 
             {/* "Etheral Shadows" text removed as per request */}
 
-            {/* External noise image removed for reliability */}
+            {noise && noise.opacity > 0 && (
+                <div
+                    style={{
+                        position: "absolute",
+                        inset: 0,
+                        backgroundImage: `url("https://framerusercontent.com/images/g0QcWrxr87K0ufOxIUFBakwYA8.png")`,
+                        backgroundSize: noise.scale * 200,
+                        backgroundRepeat: "repeat",
+                        opacity: noise.opacity / 2
+                    }}
+                />
+            )}
         </div>
     );
 }

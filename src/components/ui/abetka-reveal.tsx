@@ -74,7 +74,28 @@ export default function AbetkaReveal({ onComplete }: AbetkaRevealProps) {
     const intro = introRefs.current.slice(0, TOTAL_INTRO).filter(Boolean) as HTMLDivElement[];
     const outro = outroRefs.current.slice(0, TOTAL_OUTRO).filter(Boolean) as HTMLDivElement[];
 
-    if (intro.length === 0) return;
+    let revealed = false;
+    const safeComplete = () => {
+      if (revealed) return;
+      revealed = true;
+      gsap.to(containerRef.current, {
+        opacity: 0,
+        duration: 0.8,
+        ease: 'power2.inOut',
+        onComplete,
+      });
+    };
+
+    // Fail-safe: Reveal the page after 4.5 seconds if the animation gets stuck
+    const fallbackTimer = setTimeout(() => {
+      console.warn("Preloader fallback triggered.");
+      safeComplete();
+    }, 4500);
+
+    if (intro.length === 0) {
+      safeComplete();
+      return;
+    }
 
     const introPositions = intro.map((_, i) => {
       const angle = (i / TOTAL_INTRO) * Math.PI * 2 - Math.PI / 2;
@@ -114,21 +135,12 @@ export default function AbetkaReveal({ onComplete }: AbetkaRevealProps) {
       zIndex: (i) => 50 + i,
     });
 
-
-
     const scatter = getScatterPositions(W, H, cardW, cardH);
 
     // TIMELINE
     const tl = gsap.timeline({
       delay: 0.5, // Slight delay to ensure everything is ready
-      onComplete: () => {
-        gsap.to(containerRef.current, {
-          opacity: 0,
-          duration: 0.8,
-          ease: 'power2.inOut',
-          onComplete,
-        });
-      },
+      onComplete: safeComplete,
     });
 
     tl.to(intro, {
@@ -178,6 +190,7 @@ export default function AbetkaReveal({ onComplete }: AbetkaRevealProps) {
 
     return () => {
       tl.kill();
+      clearTimeout(fallbackTimer);
     };
   }, []); // Run once on mount
 

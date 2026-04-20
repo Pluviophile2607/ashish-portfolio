@@ -1,299 +1,309 @@
-import { useState, useEffect, useMemo, useRef } from "react";
-import { motion, useTransform, useSpring, useScroll, useMotionValue } from "framer-motion";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { motion } from "framer-motion";
+import gsap from "gsap";
+import { ScrollTrigger } from "gsap/ScrollTrigger";
 
-// --- Types ---
+gsap.registerPlugin(ScrollTrigger);
+
 export type AnimationPhase = "scatter" | "line" | "circle";
 
 interface FlipCardProps {
-    src: string;
-    index: number;
-    total: number;
-    target: { x: number; y: number; rotation: number; scale: number; opacity: number };
+  src: string;
+  index: number;
+  total: number;
+  morphProgress: number;
+  stackProgress: number;
+  exitOpacity: number;
+  containerSize: { width: number; height: number };
+  introPhase: AnimationPhase;
+  scatterPos: { x: number; y: number; rotation: number; scale: number };
 }
 
-// --- FlipCard ---
 const IMG_WIDTH = 60;
 const IMG_HEIGHT = 85;
-
-function FlipCard({ src, index, target }: FlipCardProps) {
-    return (
-        <motion.div
-            animate={{
-                x: target.x,
-                y: target.y,
-                rotate: target.rotation,
-                scale: target.scale,
-                opacity: target.opacity,
-            }}
-            transition={{ type: "spring", stiffness: 40, damping: 15 }}
-            style={{
-                position: "absolute",
-                width: IMG_WIDTH,
-                height: IMG_HEIGHT,
-                transformStyle: "preserve-3d",
-                perspective: "1000px",
-            }}
-            className="cursor-pointer group"
-        >
-            <motion.div
-                className="relative h-full w-full"
-                style={{ transformStyle: "preserve-3d" }}
-                transition={{ duration: 0.6, type: "spring", stiffness: 260, damping: 20 }}
-                whileHover={{ rotateY: 180 }}
-            >
-                {/* Front */}
-                <div
-                    className="absolute inset-0 h-full w-full overflow-hidden rounded-xl shadow-lg bg-gray-200"
-                    style={{ backfaceVisibility: "hidden" }}
-                >
-                    <img src={src} alt={`card-${index}`} className="h-full w-full object-cover" />
-                    <div className="absolute inset-0 bg-black/10 transition-colors group-hover:bg-transparent" />
-                </div>
-                {/* Back */}
-                <div
-                    className="absolute inset-0 h-full w-full overflow-hidden rounded-xl shadow-lg bg-gray-900 flex flex-col items-center justify-center p-4 border border-gray-700"
-                    style={{ backfaceVisibility: "hidden", transform: "rotateY(180deg)" }}
-                >
-                    <p className="text-[8px] font-bold text-blue-400 uppercase tracking-widest mb-1">View</p>
-                    <p className="text-xs font-medium text-white">Details</p>
-                </div>
-            </motion.div>
-        </motion.div>
-    );
-}
-
-// --- Data ---
 const TOTAL_IMAGES = 20;
+
 const IMAGES = [
-    "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=300&q=80",
-    "https://images.unsplash.com/photo-1519710164239-da123dc03ef4?w=300&q=80",
-    "https://images.unsplash.com/photo-1497366216548-37526070297c?w=300&q=80",
-    "https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=300&q=80",
-    "https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?w=300&q=80",
-    "https://images.unsplash.com/photo-1506765515384-028b60a970df?w=300&q=80",
-    "https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=300&q=80",
-    "https://images.unsplash.com/photo-1472214103451-9374bd1c798e?w=300&q=80",
-    "https://images.unsplash.com/photo-1500485035595-cbe6f645feb1?w=300&q=80",
-    "https://images.unsplash.com/photo-1469474968028-56623f02e42e?w=300&q=80",
-    "https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=300&q=80",
-    "https://images.unsplash.com/photo-1518020382113-a7e8fc38eac9?w=300&q=80",
-    "https://images.unsplash.com/photo-1465146344425-f00d5f5c8f07?w=300&q=80",
-    "https://images.unsplash.com/photo-1470252649378-9c29740c9fa8?w=300&q=80",
-    "https://images.unsplash.com/photo-1493246507139-91e8fad9978e?w=300&q=80",
-    "https://images.unsplash.com/photo-1494438639946-1ebd1d20bf85?w=300&q=80",
-    "https://images.unsplash.com/photo-1483729558449-99ef09a8c325?w=300&q=80",
-    "https://images.unsplash.com/photo-1518173946687-a4c8892bbd9f?w=300&q=80",
-    "https://images.unsplash.com/photo-1523961131990-5ea7c61b2107?w=300&q=80",
-    "https://images.unsplash.com/photo-1496568816309-51d7c20e3b21?w=300&q=80",
+  "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=300&q=80",
+  "https://images.unsplash.com/photo-1519710164239-da123dc03ef4?w=300&q=80",
+  "https://images.unsplash.com/photo-1497366216548-37526070297c?w=300&q=80",
+  "https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=300&q=80",
+  "https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?w=300&q=80",
+  "https://images.unsplash.com/photo-1506765515384-028b60a970df?w=300&q=80",
+  "https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=300&q=80",
+  "https://images.unsplash.com/photo-1472214103451-9374bd1c798e?w=300&q=80",
+  "https://images.unsplash.com/photo-1500485035595-cbe6f645feb1?w=300&q=80",
+  "https://images.unsplash.com/photo-1469474968028-56623f02e42e?w=300&q=80",
+  "https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=300&q=80",
+  "https://images.unsplash.com/photo-1518020382113-a7e8fc38eac9?w=300&q=80",
+  "https://images.unsplash.com/photo-1465146344425-f00d5f5c8f07?w=300&q=80",
+  "https://images.unsplash.com/photo-1470252649378-9c29740c9fa8?w=300&q=80",
+  "https://images.unsplash.com/photo-1493246507139-91e8fad9978e?w=300&q=80",
+  "https://images.unsplash.com/photo-1494438639946-1ebd1d20bf85?w=300&q=80",
+  "https://images.unsplash.com/photo-1483729558449-99ef09a8c325?w=300&q=80",
+  "https://images.unsplash.com/photo-1518173946687-a4c8892bbd9f?w=300&q=80",
+  "https://images.unsplash.com/photo-1523961131990-5ea7c61b2107?w=300&q=80",
+  "https://images.unsplash.com/photo-1496568816309-51d7c20e3b21?w=300&q=80",
 ];
 
-const lerp = (start: number, end: number, t: number) => start * (1 - t) + end * t;
+function clamp(value: number, min = 0, max = 1) {
+  return Math.max(min, Math.min(max, value));
+}
 
-// --- Main Component ---
+function mapRange(value: number, inMin: number, inMax: number, outMin: number, outMax: number) {
+  const ratio = (value - inMin) / (inMax - inMin);
+  return outMin + ratio * (outMax - outMin);
+}
+
+function lerp(start: number, end: number, t: number) {
+  return start + (end - start) * t;
+}
+
+function FlipCard({
+  src,
+  index,
+  total,
+  morphProgress,
+  stackProgress,
+  exitOpacity,
+  containerSize,
+  introPhase,
+  scatterPos,
+}: FlipCardProps) {
+  let x = 0;
+  let y = 0;
+  let rotation = 0;
+  let scale = 1;
+
+  if (introPhase === "scatter") {
+    x = scatterPos.x;
+    y = scatterPos.y;
+    rotation = scatterPos.rotation;
+    scale = scatterPos.scale;
+  } else if (introPhase === "line") {
+    const lineSpacing = 100;
+    x = index * lineSpacing - (total * lineSpacing) / 2;
+  } else {
+    const isMobile = containerSize.width < 768;
+    const minDim = Math.min(containerSize.width, containerSize.height);
+    const lineSpacing = 100;
+    const lineX = index * lineSpacing - (total * lineSpacing) / 2;
+    const circleRadius = Math.min(minDim * 0.47, 460);
+    const circleAngle = (index / total) * 360;
+    const circleRad = (circleAngle * Math.PI) / 180;
+    const circleX = Math.cos(circleRad) * circleRadius;
+    const circleY = Math.sin(circleRad) * circleRadius;
+    const circleRotation = circleAngle + 90;
+    const circleScale = 1;
+    const lineScale = 0.95;
+
+    const stackSpacing = isMobile ? 34 : 40;
+    const stackY = (index - total / 2) * stackSpacing - stackProgress * total * (stackSpacing * 0.35);
+    const morphX = lerp(lineX, circleX, morphProgress);
+    const morphY = lerp(0, circleY, morphProgress);
+    const morphRotation = lerp(0, circleRotation, morphProgress);
+    const morphScale = lerp(lineScale, circleScale, morphProgress);
+
+    x = lerp(morphX, 0, stackProgress);
+    y = lerp(morphY, stackY, stackProgress);
+    rotation = lerp(morphRotation, 0, stackProgress);
+    scale = lerp(morphScale, isMobile ? 1.05 : 1.15, stackProgress);
+  }
+
+  const opacity = clamp(exitOpacity - index * 0.012, 0, 1);
+
+  return (
+    <motion.div
+      style={{
+        opacity,
+        position: "absolute",
+        width: IMG_WIDTH,
+        height: IMG_HEIGHT,
+        transform: `translate3d(${x}px, ${y}px, 0) rotate(${rotation}deg) scale(${scale})`,
+        transformStyle: "preserve-3d",
+        perspective: "1000px",
+      }}
+      className="group cursor-pointer will-change-transform"
+    >
+      <motion.div
+        className="relative h-full w-full"
+        style={{ transformStyle: "preserve-3d" }}
+        transition={{ duration: 0.6, type: "spring", stiffness: 260, damping: 20 }}
+        whileHover={{ rotateY: 180 }}
+      >
+        <div
+          className="absolute inset-0 h-full w-full overflow-hidden rounded-xl bg-gray-200 shadow-lg"
+          style={{ backfaceVisibility: "hidden" }}
+        >
+          <img src={src} alt={`card-${index}`} className="h-full w-full object-cover" />
+          <div className="absolute inset-0 bg-black/10 transition-colors group-hover:bg-transparent" />
+        </div>
+        <div
+          className="absolute inset-0 flex h-full w-full flex-col items-center justify-center overflow-hidden rounded-xl border border-gray-700 bg-gray-900 p-4 shadow-lg"
+          style={{ backfaceVisibility: "hidden", transform: "rotateY(180deg)" }}
+        >
+          <p className="mb-1 text-[8px] font-bold uppercase tracking-widest text-blue-400">View</p>
+          <p className="text-xs font-medium text-white">Details</p>
+        </div>
+      </motion.div>
+    </motion.div>
+  );
+}
+
 export default function ScrollMorphHero() {
-    // Outer tall container gives the scroll "space"
-    const outerRef = useRef<HTMLDivElement>(null);
-    // Inner sticky container is measured for responsive layout
-    const innerRef = useRef<HTMLDivElement>(null);
-    const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
+  const outerRef = useRef<HTMLDivElement>(null);
+  const innerRef = useRef<HTMLDivElement>(null);
+  const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
+  const [scrollProgress, setScrollProgress] = useState(0);
+  const [introPhase, setIntroPhase] = useState<AnimationPhase>("scatter");
 
-    // Track inner container dimensions
-    useEffect(() => {
-        if (!innerRef.current) return;
-        const observer = new ResizeObserver((entries) => {
-            for (const entry of entries) {
-                setContainerSize({ width: entry.contentRect.width, height: entry.contentRect.height });
-            }
-        });
-        observer.observe(innerRef.current);
-        setContainerSize({ width: innerRef.current.offsetWidth, height: innerRef.current.offsetHeight });
-        return () => observer.disconnect();
-    }, []);
+  useEffect(() => {
+    if (!innerRef.current) {
+      return;
+    }
 
-    // Use page scroll to drive the animation. The outer div is 500vh tall.
-    // scrollYProgress goes 0→1 as the user scrolls from the top to bottom of the outer div.
-    const { scrollYProgress } = useScroll({
-        target: outerRef,
-        offset: ["start start", "end end"],
+    const observer = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        setContainerSize({ width: entry.contentRect.width, height: entry.contentRect.height });
+      }
     });
 
-    // Phase 1 (0→0.3): Circle forms
-    // Phase 2 (0.3→0.7): Circle morphs to arc
-    // Phase 3 (0.7→1.0): Arc shuffles / browses
+    observer.observe(innerRef.current);
+    setContainerSize({ width: innerRef.current.offsetWidth, height: innerRef.current.offsetHeight });
 
-    const smoothProgress = useSpring(scrollYProgress, { stiffness: 60, damping: 20 });
+    return () => observer.disconnect();
+  }, []);
 
-    // morphValue: 0 = circle, 1 = arc (happens between scroll progress 0.3 and 0.7)
-    const morphValue = useTransform(smoothProgress, [0.3, 0.7], [0, 1]);
-    const clampedMorph = useTransform(morphValue, (v) => Math.min(Math.max(v, 0), 1));
+  useLayoutEffect(() => {
+    if (!outerRef.current || !innerRef.current) {
+      return;
+    }
 
-    // shuffleValue: 0→1 as user scrolls 0.7→1.0 (replaces the old rotateValue)
-    const shuffleValue = useTransform(smoothProgress, [0.7, 1.0], [0, 1]);
-    const clampedShuffle = useTransform(shuffleValue, (v) => Math.min(Math.max(v, 0), 1));
+    const ctx = gsap.context(() => {
+      ScrollTrigger.create({
+        trigger: outerRef.current,
+        start: "top top",
+        end: "+=240%",
+        pin: innerRef.current,
+        scrub: 0.9,
+        anticipatePin: 1,
+        onUpdate: (self) => {
+          setScrollProgress(self.progress);
+        },
+      });
+    }, outerRef);
 
-    // Mouse parallax (still works fine)
-    const mouseX = useMotionValue(0);
-    const smoothMouseX = useSpring(mouseX, { stiffness: 30, damping: 20 });
+    return () => ctx.revert();
+  }, []);
 
-    useEffect(() => {
-        const el = innerRef.current;
-        if (!el) return;
-        const handleMouseMove = (e: MouseEvent) => {
-            const rect = el.getBoundingClientRect();
-            const normalizedX = ((e.clientX - rect.left) / rect.width) * 2 - 1;
-            mouseX.set(normalizedX * 100);
-        };
-        el.addEventListener("mousemove", handleMouseMove);
-        return () => el.removeEventListener("mousemove", handleMouseMove);
-    }, [mouseX]);
+  useEffect(() => {
+    const t1 = window.setTimeout(() => setIntroPhase("line"), 350);
+    const t2 = window.setTimeout(() => setIntroPhase("circle"), 1200);
 
-    // Intro phase: scatter → line → circle (time-based, happens before user scrolls)
-    const [introPhase, setIntroPhase] = useState<AnimationPhase>("scatter");
-    useEffect(() => {
-        const t1 = setTimeout(() => setIntroPhase("line"), 400);
-        const t2 = setTimeout(() => setIntroPhase("circle"), 1800);
-        return () => { clearTimeout(t1); clearTimeout(t2); };
-    }, []);
+    return () => {
+      window.clearTimeout(t1);
+      window.clearTimeout(t2);
+    };
+  }, []);
 
-    const scatterPositions = useMemo(() => IMAGES.map(() => ({
+  const scatterPositions = useMemo(
+    () =>
+      IMAGES.map(() => ({
         x: (Math.random() - 0.5) * 1500,
         y: (Math.random() - 0.5) * 1000,
         rotation: (Math.random() - 0.5) * 180,
-        scale: 0.6,
-        opacity: 0,
-    })), []);
+        scale: 0.55,
+      })),
+    [],
+  );
 
-    // Subscribe to motion values for rendering
-    const [morph, setMorph] = useState(0);
-    const [shuffle, setShuffle] = useState(0);
-    const [parallax, setParallax] = useState(0);
+  const morphProgress = clamp(mapRange(scrollProgress, 0.07, 0.42, 0, 1));
+  const stackProgress = clamp(mapRange(scrollProgress, 0.42, 0.75, 0, 1));
+  const exitOpacity = 1 - clamp(mapRange(scrollProgress, 0.78, 0.97, 0, 1));
+  const introOpacity = 1 - clamp(mapRange(scrollProgress, 0.02, 0.18, 0, 1));
+  const contentOpacity = clamp(mapRange(morphProgress, 0.6, 0.9, 0, 1)) * exitOpacity;
+  const contentY = lerp(24, -12, clamp(mapRange(morphProgress, 0.6, 1, 0, 1)));
+  const footerRevealProgress = clamp(mapRange(scrollProgress, 0.8, 1, 0, 1));
+  const revealLift = footerRevealProgress * 22;
+  const revealRadius = footerRevealProgress * 36;
 
-    useEffect(() => {
-        const u1 = clampedMorph.on("change", setMorph);
-        const u2 = clampedShuffle.on("change", setShuffle);
-        const u3 = smoothMouseX.on("change", setParallax);
-        return () => { u1(); u2(); u3(); };
-    }, [clampedMorph, clampedShuffle, smoothMouseX]);
+  return (
+    <div ref={outerRef} className="relative bg-black">
+      <div
+        ref={innerRef}
+        className="relative h-screen w-full overflow-hidden bg-black"
+        style={{ perspective: "1000px" }}
+      >
+        <div
+          className="relative flex h-full w-full flex-col items-center justify-center"
+          style={{
+            transform: `translateY(-${revealLift}vh) scale(${1 - footerRevealProgress * 0.03})`,
+            borderRadius: `${revealRadius}px`,
+            boxShadow: footerRevealProgress > 0 ? "0 20px 80px rgba(0,0,0,0.45)" : "none",
+            transformOrigin: "center top",
+          }}
+        >
+          <div className="absolute inset-0 bg-gradient-to-b from-[#111111] via-[#050505] to-black" />
 
-    // Fade-in content text when arc is formed
-    const contentOpacity = useTransform(clampedMorph, [0.8, 1], [0, 1]);
-    const contentY = useTransform(clampedMorph, [0.8, 1], [20, 0]);
-
-    return (
-        // Outer tall div — gives scroll room (500vh = 5 screens of scrolling)
-        <div ref={outerRef} className="relative h-[350vh]">
-            {/* Sticky inner — stays in viewport as user scrolls through the outer div */}
-            <div
-                ref={innerRef}
-                className="sticky top-0 h-screen w-full bg-[#FAFAFA] overflow-hidden"
-                style={{ perspective: "1000px" }}
+          <motion.div
+            className="pointer-events-none absolute z-10 flex flex-col items-center justify-center text-center"
+            style={{ opacity: introOpacity }}
+          >
+            <motion.h1
+              initial={{ opacity: 0, y: 20, filter: "blur(10px)" }}
+              animate={introPhase === "circle" ? { opacity: 1, y: 0, filter: "blur(0px)" } : {}}
+              transition={{ duration: 0.9 }}
+              className="text-2xl font-medium tracking-tight text-white md:text-4xl"
             >
-                <div className="flex h-full w-full flex-col items-center justify-center">
+              Sample of my work
+            </motion.h1>
+            <motion.p
+              initial={{ opacity: 0 }}
+              animate={introPhase === "circle" ? { opacity: 0.6 } : {}}
+              transition={{ duration: 0.9, delay: 0.2 }}
+              className="mt-4 text-xs font-bold uppercase tracking-[0.2em] text-white/60"
+            >
+              SCROLL TO EXPLORE
+            </motion.p>
+          </motion.div>
 
-                    {/* Intro text — fades out as morph begins */}
-                    <div className="absolute z-0 flex flex-col items-center justify-center text-center pointer-events-none">
-                        <motion.h1
-                            initial={{ opacity: 0, y: 20, filter: "blur(10px)" }}
-                            animate={
-                                introPhase === "circle" && morph < 0.4
-                                    ? { opacity: 1 - morph * 2.5, y: 0, filter: "blur(0px)" }
-                                    : { opacity: 0, filter: "blur(10px)" }
-                            }
-                            transition={{ duration: 1 }}
-                            className="text-2xl font-medium tracking-tight text-gray-800 md:text-4xl"
-                        >
-                            The future is built on AI.
-                        </motion.h1>
-                        <motion.p
-                            initial={{ opacity: 0 }}
-                            animate={
-                                introPhase === "circle" && morph < 0.3
-                                    ? { opacity: 0.6 }
-                                    : { opacity: 0 }
-                            }
-                            transition={{ duration: 1, delay: 0.2 }}
-                            className="mt-4 text-xs font-bold tracking-[0.2em] text-gray-500"
-                        >
-                            SCROLL TO EXPLORE
-                        </motion.p>
-                    </div>
+          <motion.div
+            className="pointer-events-none absolute top-[10%] z-20 mt-20 flex flex-col items-center justify-center px-4 text-center"
+            style={{ opacity: contentOpacity, y: contentY }}
+          >
+            <h2 className="mb-4 text-3xl font-semibold tracking-tight text-white md:text-5xl">
+              Explore Our Vision
+            </h2>
+            <p className="max-w-lg text-sm leading-relaxed text-white/70 md:text-base">
+              Discover a world where technology meets creativity.
+              <br className="hidden md:block" />
+              Scroll through our curated collection.
+            </p>
+          </motion.div>
 
-                    {/* Arc content — fades in once arc is formed */}
-                    <motion.div
-                        style={{ opacity: contentOpacity, y: contentY }}
-                        className="absolute top-[10%] z-10 flex flex-col items-center justify-center text-center pointer-events-none px-4"
-                    >
-                        <h2 className="text-3xl md:text-5xl font-semibold text-gray-900 tracking-tight mb-4">
-                            Explore Our Vision
-                        </h2>
-                        <p className="text-sm md:text-base text-gray-600 max-w-lg leading-relaxed">
-                            Discover a world where technology meets creativity. <br className="hidden md:block" />
-                            Scroll through our curated collection.
-                        </p>
-                    </motion.div>
+          <div className="relative z-30 flex h-full w-full items-center justify-center">
+            {IMAGES.slice(0, TOTAL_IMAGES).map((src, i) => (
+              <FlipCard
+                key={i}
+                src={src}
+                index={i}
+                total={TOTAL_IMAGES}
+                morphProgress={morphProgress}
+                stackProgress={stackProgress}
+                exitOpacity={exitOpacity}
+                containerSize={containerSize}
+                introPhase={introPhase}
+                scatterPos={scatterPositions[i]}
+              />
+            ))}
+          </div>
 
-                    {/* Cards container */}
-                    <div className="relative flex items-center justify-center w-full h-full">
-                        {IMAGES.slice(0, TOTAL_IMAGES).map((src, i) => {
-                            let target = { x: 0, y: 0, rotation: 0, scale: 1, opacity: 1 };
-
-                            if (introPhase === "scatter") {
-                                target = scatterPositions[i];
-                            } else if (introPhase === "line") {
-                                const lineSpacing = 110;
-                                const totalW = TOTAL_IMAGES * lineSpacing;
-                                target = { x: i * lineSpacing - totalW / 2, y: 0, rotation: 0, scale: 1, opacity: 1 };
-                            } else {
-                                const isMobile = containerSize.width < 768;
-                                const minDim = Math.min(containerSize.width, containerSize.height);
-
-                                // Circle
-                                const circleRadius = Math.min(minDim * 0.47, 460);
-                                const circleAngle = (i / TOTAL_IMAGES) * 360;
-                                const circleRad = (circleAngle * Math.PI) / 180;
-                                const circlePos = {
-                                    x: Math.cos(circleRad) * circleRadius,
-                                    y: Math.sin(circleRad) * circleRadius,
-                                    rotation: circleAngle + 90,
-                                };
-
-                                // Arc
-                                const baseRadius = Math.min(containerSize.width, containerSize.height * 1.5);
-                                const arcRadius = baseRadius * (isMobile ? 1.4 : 1.1);
-                                const arcApexY = containerSize.height * (isMobile ? 0.35 : 0.25);
-                                const arcCenterY = arcApexY + arcRadius;
-                                const spreadAngle = isMobile ? 100 : 130;
-                                const startAngle = -90 - spreadAngle / 2;
-                                const step = spreadAngle / (TOTAL_IMAGES - 1);
-
-                                const maxRotation = spreadAngle * 0.8;
-                                const boundedRotation = -shuffle * maxRotation;
-                                const currentArcAngle = startAngle + i * step + boundedRotation;
-                                const arcRad = (currentArcAngle * Math.PI) / 180;
-
-                                const arcPos = {
-                                    x: Math.cos(arcRad) * arcRadius + parallax,
-                                    y: Math.sin(arcRad) * arcRadius + arcCenterY,
-                                    rotation: currentArcAngle + 90,
-                                    scale: isMobile ? 1.4 : 1.8,
-                                };
-
-                                target = {
-                                    x: lerp(circlePos.x, arcPos.x, morph),
-                                    y: lerp(circlePos.y, arcPos.y, morph),
-                                    rotation: lerp(circlePos.rotation, arcPos.rotation, morph),
-                                    scale: lerp(1, arcPos.scale, morph),
-                                    opacity: 1,
-                                };
-                            }
-
-                            return (
-                                <FlipCard key={i} src={src} index={i} total={TOTAL_IMAGES} target={target} />
-                            );
-                        })}
-                    </div>
-                </div>
-            </div>
+          <div
+            className="pointer-events-none absolute inset-x-0 bottom-0 h-56 bg-gradient-to-t from-black via-black/70 to-transparent"
+            style={{ opacity: clamp(0.35 + footerRevealProgress * 0.65) }}
+          />
         </div>
-    );
+      </div>
+    </div>
+  );
 }
